@@ -2,7 +2,7 @@
 
 A complete reference for junior developers. Covers **why** every decision was made, **what** each piece does, **how** to work with it, and the **real-world gotchas** we hit building it.
 
-> This guide was written alongside the actual build. Every bug, fix, and dead end is documented here — because that's how real projects work.
+> This guide was written alongside the actual build. Every bug, fix, and dead end is documented here.
 
 ---
 
@@ -33,7 +33,7 @@ A complete reference for junior developers. Covers **why** every decision was ma
 
 ## 1. The Problem We're Solving
 
-Parents in Sydney want to find activities for their kids, filtered by age. The challenge is data — there is no single "kids activities" database. We need to pull from multiple sources, normalise everything into one shape, and store it locally.
+Parents in Sydney want to find activities for their kids, filtered by age. The challenge is data, there is no single "kids activities" database. We need to pull from multiple sources, normalise everything into one shape, and store it locally.
 
 **Three types of data we need:**
 
@@ -57,8 +57,8 @@ events total:           0  ← Eventbrite search requires paid tier (post-2023)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     pipeline.py                          │
-│               (the orchestrator — runs all)              │
+│                     pipeline.py                         │
+│               (the orchestrator — runs all)             │
 └──────┬───────────┬──────────────┬───────────────────────┘
        │           │              │
        ▼           ▼              ▼
@@ -76,13 +76,13 @@ events total:           0  ← Eventbrite search requires paid tier (post-2023)
                    (activities.db)
 ```
 
-**Key principle**: each source is isolated in its own file. The pipeline just calls them and saves results. If one source breaks, the others still work. This is called the **Single Responsibility Principle** — each file has one job.
+**Key principle**: each source is isolated in its own file. The pipeline just calls them and saves results. If one source breaks, the others still work. This is called the **Single Responsibility Principle**, each file has one job.
 
 ---
 
 ## 3. Architecture Deep Dive — The Whys and Hows
 
-This section explains the architectural decisions behind the project. Not just *what* the code does, but *why it was designed this way* — and what would happen if you designed it differently.
+This section explains the architectural decisions behind the project. Not just *what* the code does, but *why it was designed this way* and what would happen if you designed it differently.
 
 ---
 
@@ -131,7 +131,7 @@ Each adapter:
 2. Returns the same type: `list[Venue]`
 3. The pipeline only deals with `list[Venue]` — it doesn't care about the source
 
-**Why this matters**: if OpenTripMap changes their API tomorrow, you update `opentripmap.py` only. The pipeline, the DB, and the other sources are untouched. This is called **loose coupling** — parts of the system don't depend on each other's internals.
+**Why this matters**: if OpenTripMap changes their API tomorrow, you update `opentripmap.py` only. The pipeline, the DB, and the other sources are untouched. This is called **loose coupling**, parts of the system don't depend on each other's internals.
 
 ---
 
@@ -174,7 +174,7 @@ Pydantic acts as a **checkpoint**:
 Raw API data → [Pydantic model] → Validated, typed Python object → DB
 ```
 
-If data is wrong, Pydantic raises an error immediately at the checkpoint — not silently later when you try to use it. And it auto-converts compatible types (string `"33.8"` → float `33.8`).
+If data is wrong, Pydantic raises an error immediately at the checkpoint, not silently later when you try to use it. And it auto-converts compatible types (string `"33.8"` → float `33.8`).
 
 ```python
 # Pydantic catches this immediately:
@@ -198,9 +198,9 @@ conn.execute("INSERT INTO venues (latitude) VALUES (?)", (venue["latitude"],))
 **Delete-then-insert** = wipe the table, reload everything. Problem: if one source fails mid-run, you lose all existing data.
 
 **Upsert** = insert if new, update if exists. Best of both:
-- Re-runs are safe — no duplicates, no data loss
-- Partial runs are safe — if Overpass fails, OTM data stays untouched
-- Incremental updates work — run one source to refresh just its records
+- Re-runs are safe -> no duplicates, no data loss
+- Partial runs are safe -> if Overpass fails, OTM data stays untouched
+- Incremental updates work -> run one source to refresh just its records
 
 ```sql
 INSERT INTO venues (source, external_id, name, ...)
@@ -209,7 +209,7 @@ ON CONFLICT(source, external_id) DO UPDATE SET
     name=excluded.name, ...
 ```
 
-The `UNIQUE(source, external_id)` constraint is what makes this work — it defines what "already exists" means. A venue is unique by its combination of source AND its ID within that source.
+The `UNIQUE(source, external_id)` constraint is what makes this work, it defines what "already exists" means. A venue is unique by its combination of source AND its ID within that source.
 
 ---
 
@@ -261,7 +261,7 @@ python -c "from pipeline import run; run(use_opentripmap=False, use_overpass=Fal
 python -c "from pipeline import run; run(eventbrite_pages=0)"
 ```
 
-No code changes needed. No commenting/uncommenting. This pattern is called **configuration over code** — behaviour changes via config, not edits.
+No code changes needed. No commenting/uncommenting. This pattern is called **configuration over code** -> behaviour changes via config, not edits.
 
 ---
 
@@ -276,11 +276,11 @@ The right database depends on the stage of the project:
 | Real production app | **PostgreSQL** | Concurrent writes, scaling, full SQL |
 
 We're at prototype stage. SQLite gives us:
-- A single file (`activities.db`) — easy to copy, share, backup
-- Full SQL — same queries work in PostgreSQL later
-- No server — just Python stdlib `sqlite3`
+- A single file (`activities.db`) —> easy to copy, share, backup
+- Full SQL —> same queries work in PostgreSQL later
+- No server —> just Python stdlib `sqlite3`
 
-**Migration path**: when you need PostgreSQL, swap `sqlite3.connect()` for a `psycopg2` connection. The SQL is identical — SQLite and PostgreSQL both support `INSERT ... ON CONFLICT DO UPDATE`. The migration is one afternoon of work, not a rewrite.
+**Migration path**: when you need PostgreSQL, swap `sqlite3.connect()` for a `psycopg2` connection. The SQL is identical; SQLite and PostgreSQL both support `INSERT ... ON CONFLICT DO UPDATE`. The migration is one afternoon of work, not a rewrite.
 
 ---
 
@@ -307,7 +307,7 @@ We're at prototype stage. SQLite gives us:
 6. activities.db               ← 1264 venues, ready to query
 ```
 
-At every step, data is validated before it moves forward. If step 2 fails (network error), step 3 never runs — but step 4 (other sources) still does. If a single record fails validation in step 2, that record is skipped — the rest of the batch continues.
+At every step, data is validated before it moves forward. If step 2 fails (network error), step 3 never runs, but step 4 (other sources) still does. If a single record fails validation in step 2, that record is skipped, the rest of the batch continues.
 
 ---
 
@@ -315,34 +315,34 @@ At every step, data is validated before it moves forward. If step 2 fails (netwo
 
 ### Why NOT Google Places?
 
-Google Places is the obvious choice — great data, good AU coverage. But it **requires a credit card** to activate an API key. For a student project with 4 developers that's a blocker: one person ends up owning the billing, and the $200/month free credit disappears fast in production.
+Google Places is the obvious choice, great data, good AU coverage. But it **requires a credit card** to activate an API key. For a student project with 4 developers that's a blocker: one person ends up owning the billing, and the $200/month free credit disappears fast in production.
 
 ### Why OpenTripMap? (primary venue source)
 
 - Free tier: **500 requests/day**, no credit card
 - Data sourced from OpenStreetMap but **pre-cleaned and structured**
-- Simple REST API — radius search, no custom query language
+- Simple REST API, radius search, no custom query language
 - Returns GeoJSON with coordinates embedded
-- Covers Sydney well — parks, sports centres, museums, libraries
+- Covers Sydney well, parks, sports centres, museums, libraries
 
 **Advantage over raw Overpass**: Overpass requires you to write Overpass QL (a custom query language). OpenTripMap wraps the same data in a standard REST API. Less to learn, faster to get running.
 
 ### Why Overpass (as supplement)?
 
-OpenTripMap caps at 500 req/day. Overpass is unlimited and free. More importantly, Overpass lets you query specific OSM tags (`surface=grass`, `wheelchair=yes`) that OpenTripMap doesn't expose. We run both — different `source` values in the DB, deduped automatically via `UNIQUE(source, external_id)`.
+OpenTripMap caps at 500 req/day. Overpass is unlimited and free. More importantly, Overpass lets you query specific OSM tags (`surface=grass`, `wheelchair=yes`) that OpenTripMap doesn't expose. We run both, different `source` values in the DB, deduped automatically via `UNIQUE(source, external_id)`.
 
 ### Why NSW Open Data CSVs?
 
 State governments publish authoritative datasets of public facilities. This data is:
-- **More reliable** than OSM for official venues — it's council-maintained
-- **Free** — no API, just CSV download
-- **Covers gaps** OSM misses — newer facilities, official names
+- **More reliable** than OSM for official venues, it's council-maintained
+- **Free**, no API, just CSV download
+- **Covers gaps** OSM misses, newer facilities, official names
 
 Downside: manual download, not a live API. Good enough for a prototype.
 
 ### Why Eventbrite?
 
-Venues are static. Eventbrite gives us **scheduled activities** — events with specific dates, organised by people who fill in details properly (including age ranges). The Kids & Family category (`category_id=10`) filters out 90% of irrelevant results.
+Venues are static. Eventbrite gives us **scheduled activities**, events with specific dates, organised by people who fill in details properly (including age ranges). The Kids & Family category (`category_id=10`) filters out 90% of irrelevant results.
 
 **Important**: as of 2023, Eventbrite removed public search from the free API tier. The `/events/search/` endpoint returns 404 for standard API keys. The code handles this gracefully. See [section 9](#9-source-eventbritepy) for alternatives.
 
@@ -353,8 +353,6 @@ RapidAPI wraps the same APIs (OpenTripMap, Google Places) but adds:
 - Rate limits that differ from the original
 - Extra latency (proxy hop)
 - Pricing that can change without warning
-
-For production: RapidAPI is useful for unified billing. For a student project: go direct.
 
 ---
 
@@ -418,17 +416,17 @@ class Event(BaseModel):
 
 ### Why Pydantic?
 
-Pydantic validates your data automatically. If a source returns `"33.8688"` (string) where you declared `latitude: float`, Pydantic converts it. If it returns `None` where you need a value, it raises an error immediately — not silently somewhere else later.
+Pydantic validates your data automatically. If a source returns `"33.8688"` (string) where you declared `latitude: float`, Pydantic converts it. If it returns `None` where you need a value, it raises an error immediately, not silently somewhere else later.
 
 Think of models as a **contract**: "this is what a Venue must look like." Every source produces `Venue` objects. The database only accepts `Venue` objects. Nothing wrong slips through.
 
 ### Why `Optional[str] = None`?
 
-Many fields won't be available from every source. OpenTripMap doesn't always have phone numbers. NSW CSVs don't have websites. `Optional[str] = None` means "this field can be absent — that's fine." Without `Optional`, Pydantic would raise an error for every missing field.
+Many fields won't be available from every source. OpenTripMap doesn't always have phone numbers. NSW CSVs don't have websites. `Optional[str] = None` means "this field can be absent, that's fine." Without `Optional`, Pydantic would raise an error for every missing field.
 
 ### Why a separate `AgeRange` model?
 
-Age is two values: min and max. You could store them as flat columns (`age_min`, `age_max`) — and we do in SQLite — but grouping them in a model makes the Python code more expressive: `venue.age_range.min_age` is clearer than `venue.age_min`.
+Age is two values: min and max. You could store them as flat columns (`age_min`, `age_max`), and we do in SQLite, but grouping them in a model makes the Python code more expressive: `venue.age_range.min_age` is clearer than `venue.age_min`.
 
 ---
 
@@ -473,7 +471,7 @@ params = {
 
 > **Note**: `kids_places` and `leisure` look like they should work but the API returns 400 for them. Stick to the four above.
 
-**GeoJSON format**: coordinates come as `[longitude, latitude]` — note the ORDER. Most people expect lat/lon, but GeoJSON is lon/lat. This trips up everyone the first time.
+**GeoJSON format**: coordinates come as `[longitude, latitude]`, note the ORDER. Most people expect lat/lon, but GeoJSON is lon/lat. This trips up everyone the first time.
 
 ```python
 geom = item.get("geometry", {}).get("coordinates", [])
@@ -495,9 +493,9 @@ while len(venues) < limit:
 
 **`_parse_item` helper**: item parsing is extracted into its own function. This keeps `fetch_sydney_venues` readable and reduces Cognitive Complexity (a code quality metric) from 17 to ~9. SonarQube flags functions above 15.
 
-**`enrich_venue(xid)`**: separate function to fetch full detail for one place. Each call = 1 API request. Don't call this for all 500 venues — use it only on-demand or for your top picks.
+**`enrich_venue(xid)`**: separate function to fetch full detail for one place. Each call = 1 API request. Don't call this for all 500 venues, use it only on-demand or for your top picks.
 
-**Rate limiting**: `time.sleep(0.2)` between pages. Free tier = 500 req/day. At 100 results/req, 5 requests = 500 venues. Respect the limit — if you hit it, you're blocked for the day.
+**Rate limiting**: `time.sleep(0.2)` between pages. Free tier = 500 req/day. At 100 results/req, 5 requests = 500 venues. Respect the limit, if you hit it, you're blocked for the day.
 
 ### Gotcha 1 — `kinds` must NOT be URL-encoded
 
@@ -543,12 +541,12 @@ items = data.get("features", [])
 
 ### What it does
 
-Queries OpenStreetMap directly via the Overpass API — the "query engine" for OSM raw data. Returns named venues across Sydney using a bounding box.
+Queries OpenStreetMap directly via the Overpass API, the "query engine" for OSM raw data. Returns named venues across Sydney using a bounding box.
 
 ### The API
 
 URL: `https://overpass-api.de/api/interpreter`  
-No auth required. Public service — be polite, add delays.
+No auth required. Public service, be polite, add delays.
 
 ### Overpass QL — the query language
 
@@ -586,7 +584,7 @@ name = tags.get("name")
 if not name:
     continue
 ```
-OSM has millions of unnamed nodes — benches, trees, lamp posts. No name = useless for an activity finder.
+OSM has millions of unnamed nodes, benches, trees, lamp posts. No name = useless for an activity finder.
 
 **`fee` tag mapping**:
 - `fee=yes` → `is_free=False`
@@ -621,7 +619,7 @@ with urllib.request.urlopen(req, timeout=120) as r:
     elements = json.loads(r.read())["elements"]
 ```
 
-The `User-Agent` header is critical — Overpass blocks requests that look like anonymous scrapers.
+The `User-Agent` header is critical, Overpass blocks requests that look like anonymous scrapers.
 
 ### When to use Overpass vs OpenTripMap
 
@@ -640,7 +638,7 @@ The `User-Agent` header is critical — Overpass blocks requests that look like 
 
 ### What it does
 
-Reads CSV files downloaded from [data.nsw.gov.au](https://data.nsw.gov.au). No API call — pure local file processing with pandas.
+Reads CSV files downloaded from [data.nsw.gov.au](https://data.nsw.gov.au). No API call, pure local file processing with pandas.
 
 ### Why manual download?
 
@@ -720,7 +718,7 @@ Get a token: eventbrite.com → Account → Developer Links → API Keys → Req
 
 ### `expand=venue` — avoiding N+1 requests
 
-By default, event responses don't include venue details. Without `expand=venue`, you'd need one extra request per event to get its location — called the **N+1 problem**. With `expand=venue`, Eventbrite embeds the venue inside each event response:
+By default, event responses don't include venue details. Without `expand=venue`, you'd need one extra request per event to get its location, called the **N+1 problem**. With `expand=venue`, Eventbrite embeds the venue inside each event response:
 
 ```python
 params["expand"] = "venue"
@@ -746,15 +744,15 @@ def _extract_age_range(text: str) -> AgeRange | None:
     return None
 ```
 
-**Coverage ~60%** — catches common patterns, misses unusual phrasings. Good enough for a prototype.
+**Coverage ~60%** catches common patterns, misses unusual phrasings. Good enough for a prototype.
 
 ### Alternatives to Eventbrite for events
 
 Since Eventbrite search is dead on free tier, consider:
-- **Meetup API** — has free tier, good for community events
-- **Humanitix API** — Australian-founded ticketing platform, developer-friendly
-- **Scraping eventbrite.com.au** — technically against ToS but works for prototypes
-- **Council event feeds** — some Sydney councils publish event RSS/JSON feeds
+- **Meetup API** —> has free tier, good for community events
+- **Humanitix API** —> Australian-founded ticketing platform, developer-friendly
+- **Scraping eventbrite.com.au** —> technically against ToS but works for prototypes
+- **Council event feeds** —> some Sydney councils publish event RSS/JSON feeds
 
 ---
 
@@ -771,7 +769,7 @@ Since Eventbrite search is dead on free tier, consider:
 | Tools | DB Browser (free GUI) | pgAdmin, DBeaver |
 | Good for | Prototypes, local tools | Production apps |
 
-For this project: SQLite. If you grow to a real multi-user app, the migration to PostgreSQL is a one-day job — SQLAlchemy makes it almost transparent.
+For this project: SQLite. If you grow to a real multi-user app, the migration to PostgreSQL is a one-day job, SQLAlchemy makes it almost transparent.
 
 ### Table design
 
@@ -792,17 +790,17 @@ ON CONFLICT(source, external_id) DO UPDATE SET
     ...
 ```
 
-**Upsert** = INSERT if new, UPDATE if already exists. The `UNIQUE(source, external_id)` constraint is the key — it means "no two rows from the same source can have the same ID."
+**Upsert** = INSERT if new, UPDATE if already exists. The `UNIQUE(source, external_id)` constraint is the key, it means "no two rows from the same source can have the same ID."
 
-Running the pipeline twice? Safe — records update, no duplicates.
+Running the pipeline twice? Safe, records update, no duplicates.
 
 `excluded.name` = SQLite syntax for "the value we were trying to insert" in the ON CONFLICT clause.
 
 ### Why `conn.row_factory = sqlite3.Row`?
 
-Without it, sqlite3 returns tuples: `(1, "osm", "Centennial Park", ...)` — you'd access by index `row[2]`.
+Without it, sqlite3 returns tuples: `(1, "osm", "Centennial Park", ...)` you'd access by index `row[2]`.
 
-With it, results behave like dicts: `row["name"]` — much more readable and safe if column order changes.
+With it, results behave like dicts: `row["name"]`, much more readable and safe if column order changes.
 
 ```python
 conn = sqlite3.connect("activities.db")
@@ -879,7 +877,7 @@ Rules:
 - No spaces around `=`
 - **Never commit `.env` to Git** — add it to `.gitignore`
 
-`load_dotenv()` in `config.py` reads this file at import time. You don't need to `export` anything — just run `python pipeline.py`.
+`load_dotenv()` in `config.py` reads this file at import time. You don't need to `export` anything, just run `python pipeline.py`.
 
 ### Why `.get()` not `["KEY"]`
 
@@ -891,11 +889,11 @@ OPENTRIPMAP_KEY = os.environ["OPENTRIPMAP_KEY"]  # KeyError
 OPENTRIPMAP_KEY = os.environ.get("OPENTRIPMAP_KEY", "")  # safe
 ```
 
-Each source checks `if not OPENTRIPMAP_KEY: return []` — so missing keys skip gracefully instead of crashing the whole pipeline. In a team where not everyone has every key, this matters.
+Each source checks `if not OPENTRIPMAP_KEY: return []`, so missing keys skip gracefully instead of crashing the whole pipeline. In a team where not everyone has every key, this matters.
 
 ### Why environment variables at all?
 
-API keys committed to Git are **exposed forever** — even if you delete them in a later commit, they exist in the git history. Anyone who clones the repo can find them. GitHub's secret scanning bot will email you. Some services (AWS) will automatically deactivate keys found in public repos.
+API keys committed to Git are **exposed forever**, even if you delete them in a later commit, they exist in the git history. Anyone who clones the repo can find them. GitHub's secret scanning bot will email you. Some services (AWS) will automatically deactivate keys found in public repos.
 
 The pattern: secrets live in environment, code reads from environment.
 
@@ -903,7 +901,7 @@ The pattern: secrets live in environment, code reads from environment.
 
 ## 13. Real-World Bugs We Hit (and Fixed)
 
-This section documents every bug encountered during the actual build. Reading bug histories is one of the best ways to learn.
+This section documents every bug encountered during the actual build.
 
 ---
 
@@ -915,7 +913,7 @@ This section documents every bug encountered during the actual build. Reading bu
 
 **What we tried second**: Switching httpx to GET with `params={"data": query}`. Still 406.
 
-**Root cause**: httpx sends request headers that the Overpass server rejects, regardless of POST or GET. The exact header causing it is hard to pin down — Overpass is picky.
+**Root cause**: httpx sends request headers that the Overpass server rejects, regardless of POST or GET. The exact header causing it is hard to pin down, Overpass is picky.
 
 **Fix**: Drop httpx entirely for this request. Use Python's stdlib `urllib` instead, with an explicit `User-Agent` header (Overpass blocks anonymous-looking requests):
 
@@ -932,7 +930,7 @@ with urllib.request.urlopen(req, timeout=120) as r:
     elements = json.loads(r.read())["elements"]
 ```
 
-**Lesson**: when an HTTP library misbehaves with a specific server, switching to a lower-level library is sometimes the right move. Don't spend hours debugging headers — try a different tool.
+**Lesson**: when an HTTP library misbehaves with a specific server, switching to a lower-level library is sometimes the right move. Don't spend hours debugging headers, try a different tool.
 
 ---
 
@@ -951,7 +949,7 @@ query_string = str(httpx.QueryParams(params)) + f"&kinds={KIDS_KINDS}"
 resp = httpx.get(f"{BASE_URL}/radius?{query_string}", timeout=30)
 ```
 
-**Lesson**: URL encoding is a common source of bugs with APIs. When you see a 400 error, look at the full URL in the error message — often the problem is visible right there.
+**Lesson**: URL encoding is a common source of bugs with APIs. When you see a 400 error, look at the full URL in the error message, often the problem is visible right there.
 
 ---
 
@@ -974,7 +972,7 @@ data = resp.json()
 items = data.get("features", [])
 ```
 
-**Lesson**: always print a raw sample of an API response before writing a parser. Never assume the shape of the data — verify it.
+**Lesson**: always print a raw sample of an API response before writing a parser. Never assume the shape of the data —> verify it.
 
 ---
 
@@ -986,7 +984,7 @@ items = data.get("features", [])
 
 **Fix**: `str(httpx.QueryParams(params))` instead of `httpx.QueryParams(params).encode()`.
 
-**Lesson**: when in doubt, `print(type(x))` and `print(dir(x))` — check what methods actually exist before assuming.
+**Lesson**: when in doubt, `print(type(x))` and `print(dir(x))` —> check what methods actually exist before assuming.
 
 ---
 
@@ -996,7 +994,7 @@ items = data.get("features", [])
 
 **Root cause**: Eventbrite deprecated public event search for free API keys after 2023. The endpoint is simply gone for standard accounts.
 
-**Fix**: handle 404 gracefully — log and move on:
+**Fix**: handle 404 gracefully, log and move on:
 ```python
 if resp.status_code == 404:
     print("  [eventbrite] search endpoint unavailable — requires paid tier")
@@ -1024,9 +1022,9 @@ if resp.status_code == 404:
 ### Add a new venue source
 
 1. Create `sources/my_source.py`
-2. Write `def fetch_venues() -> list[Venue]:` — return a list of `Venue` objects
+2. Write `def fetch_venues() -> list[Venue]:` return a list of `Venue` objects
 3. In `pipeline.py`: import it, call it, upsert results
-4. That's it — DB handles dedup automatically
+4. That's it —> DB handles dedup automatically
 
 ### Add a new field to Venue
 
@@ -1097,7 +1095,7 @@ Results appear on a map. Use this to validate queries before writing Python.
 3. Copy API key from dashboard
 4. Add to `.env`: `OPENTRIPMAP_KEY=your_key`
 
-Free tier: **500 requests/day**. At 100 venues/request, that's 500 venues per day — enough to seed the DB in one run.
+Free tier: **500 requests/day**. At 100 venues/request, that's 500 venues per day, enough to seed the DB in one run.
 
 ### Eventbrite (free, no CC — but search is paywalled)
 
@@ -1111,7 +1109,7 @@ Note: the key works for reading your own events. Public search (`/events/search/
 
 ### Overpass API
 
-No key. Public service. Limit your request rate — don't send more than 1 request per second.
+No key. Public service. Limit your request rate, don't send more than 1 request per second.
 
 ### NSW Open Data
 
@@ -1244,7 +1242,7 @@ conn.close()
 
 ### GUI tool
 
-[DB Browser for SQLite](https://sqlitebrowser.org) — free, Mac/Windows/Linux. Open `activities.db`, browse tables, run queries visually.
+[DB Browser for SQLite](https://sqlitebrowser.org) -> free, Mac/Windows/Linux. Open `activities.db`, browse tables, run queries visually.
 
 ---
 
@@ -1329,7 +1327,7 @@ uvicorn api:app --reload
 0 6 * * * cd /path/to/sydney-kids-activities && source .venv/bin/activate && python pipeline.py >> logs/pipeline.log 2>&1
 ```
 
-Upsert logic means re-runs are safe — no duplicates, records update in place.
+Upsert logic means re-runs are safe, no duplicates, records update in place.
 
 ### Add Meetup API as events source (Eventbrite replacement)
 
